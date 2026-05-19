@@ -1,0 +1,15 @@
+{
+  "checkpoint": "models/scratch_casia_arcface/epoch_021.pth",
+  "symlink": "models/scratch_casia_arcface/best_lfw.pth",
+  "epoch": 21,
+  "num_classes": 10572,
+  "training_samples_seen_this_epoch": 490592,
+  "pretrained_backbone": false,
+  "evaluation_output_dir": "results/scratch_casia_arcface_lfw_epoch21_margin16",
+  "lfw_ten_fold_accuracy_mean": 0.8648333333333333,
+  "lfw_ten_fold_accuracy_std": 0.018355289882392656,
+  "roc_auc": 0.9302059444444444,
+  "preprocess": "mtcnn",
+  "mtcnn_margin": 16,
+  "image_size": 112
+}

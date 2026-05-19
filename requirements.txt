@@ -1,0 +1,18 @@
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.11.0+cu128
+torchvision==0.26.0+cu128
+numpy==1.26.4
+Pillow==10.2.0
+scikit-learn==1.7.2
+scipy==1.15.3
+matplotlib==3.10.9
+pandas==2.3.3
+tqdm==4.67.3
+opencv-python==4.9.0.80
+requests==2.34.2
+pyarrow==24.0.0
+
+# Install after this file with:
+# python -m pip install facenet-pytorch==2.6.0 --no-deps
+# Reason: facenet-pytorch metadata pins torch<2.3, but Blackwell sm_120
+# requires the newer cu128 PyTorch wheel used in this project.

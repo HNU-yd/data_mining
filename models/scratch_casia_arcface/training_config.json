@@ -1,0 +1,21 @@
+{
+  "data_dir": "/home/data1/data_mining/data/raw/casia_webface_parquet",
+  "output_dir": "models/scratch_casia_arcface",
+  "epochs": 5,
+  "resume": "models/scratch_casia_arcface/latest.pth",
+  "resume_optimizer": false,
+  "batch_size": 512,
+  "num_workers": 12,
+  "image_size": 112,
+  "lr": 0.01,
+  "weight_decay": 0.0005,
+  "arc_scale": 64.0,
+  "arc_margin": 0.2,
+  "shuffle_buffer": 16384,
+  "max_samples": null,
+  "seed": 42,
+  "device": "cuda",
+  "total_rows": 490592,
+  "num_classes": 10572,
+  "steps_per_epoch": 960
+}
