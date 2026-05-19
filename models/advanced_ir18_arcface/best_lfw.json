@@ -1,0 +1,18 @@
+{
+  "checkpoint": "models/advanced_ir18_arcface/epoch_020.pth",
+  "symlink": "models/advanced_ir18_arcface/best_lfw.pth",
+  "epoch": 20,
+  "backbone": "ir_resnet18",
+  "loss": "ArcFace",
+  "num_classes": 10572,
+  "training_samples_seen_this_epoch": 490592,
+  "pretrained_backbone": false,
+  "baseline_output_dir": "results/scratch_casia_arcface_lfw_epoch21",
+  "advanced_output_dir": "results/advanced_ir18_arcface_lfw_epoch20_margin16",
+  "lfw_ten_fold_accuracy_mean_margin0": 0.9243333333333335,
+  "lfw_ten_fold_accuracy_std_margin0": 0.011623730516108462,
+  "lfw_ten_fold_accuracy_mean_margin16": 0.9411666666666667,
+  "lfw_ten_fold_accuracy_std_margin16": 0.009429563439877076,
+  "roc_auc_margin16": 0.9719844444444444,
+  "image_size": 112
+}

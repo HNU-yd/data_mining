@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train a scratch FaceNet/InceptionResnetV1 backbone on CASIA-WebFace parquet shards."""
+"""Train a scratch face-recognition backbone on CASIA-WebFace parquet shards."""
 
 from __future__ import annotations
 
@@ -17,13 +17,17 @@ import numpy as np
 import pyarrow.parquet as pq
 import torch
 import torch.nn.functional as F
-from facenet_pytorch import InceptionResnetV1, fixed_image_standardization
+from facenet_pytorch import fixed_image_standardization
 from PIL import Image
 from torch import nn
 from torch.utils.data import DataLoader, IterableDataset
 from torchvision import transforms
 from tqdm import tqdm
 
+try:
+    from face_backbones import build_backbone, canonical_backbone_name
+except ModuleNotFoundError:
+    from .face_backbones import build_backbone, canonical_backbone_name
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATA_DIR = PROJECT_ROOT / "data" / "raw" / "casia_webface_parquet"
@@ -128,6 +132,11 @@ class CASIAParquetIterable(IterableDataset):
         worker = torch.utils.data.get_worker_info()
         worker_id = 0 if worker is None else worker.id
         rng = random.Random(self.seed + self.epoch * 1009 + worker_id)
+        max_samples = self.max_samples
+        if worker is not None and max_samples is not None:
+            base = max_samples // worker.num_workers
+            extra = 1 if worker_id < (max_samples % worker.num_workers) else 0
+            max_samples = base + extra
         emitted = 0
         buffer: deque[tuple[bytes, int]] = deque()
         for item in self._rows(rng):
@@ -143,7 +152,7 @@ class CASIAParquetIterable(IterableDataset):
                     buffer.rotate(idx)
                     yield self._decode(chosen)
                     emitted += 1
-            if self.max_samples is not None and emitted >= self.max_samples:
+            if max_samples is not None and emitted >= max_samples:
                 return
         while buffer:
             idx = rng.randrange(len(buffer))
@@ -152,7 +161,7 @@ class CASIAParquetIterable(IterableDataset):
             buffer.rotate(idx)
             yield self._decode(chosen)
             emitted += 1
-            if self.max_samples is not None and emitted >= self.max_samples:
+            if max_samples is not None and emitted >= max_samples:
                 return
 
     def _decode(self, item: tuple[bytes, int]) -> tuple[torch.Tensor, int]:
@@ -186,6 +195,15 @@ def estimate_loader_batches(row_counts: list[int], batch_size: int, num_workers:
     return sum(math.ceil(rows / batch_size) for rows in rows_by_worker if rows > 0)
 
 
+def estimate_max_sample_batches(max_samples: int, batch_size: int, num_workers: int) -> int:
+    if num_workers <= 0:
+        return math.ceil(max_samples / batch_size)
+    base = max_samples // num_workers
+    remainder = max_samples % num_workers
+    quotas = [base + (1 if worker_id < remainder else 0) for worker_id in range(num_workers)]
+    return sum(math.ceil(quota / batch_size) for quota in quotas if quota > 0)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
@@ -193,6 +211,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--resume", type=Path, default=None, help="resume backbone/head weights from a previous checkpoint")
     parser.add_argument("--resume-optimizer", action="store_true", help="also restore optimizer and scheduler states")
+    parser.add_argument(
+        "--backbone",
+        choices=["inception_resnet_v1", "ir_resnet18", "ir_resnet34"],
+        default="inception_resnet_v1",
+    )
     parser.add_argument("--batch-size", type=int, default=512)
     parser.add_argument("--num-workers", type=int, default=8)
     parser.add_argument("--image-size", type=int, default=112)
@@ -220,7 +243,7 @@ def main() -> None:
     total_rows, num_classes, row_counts = count_rows_and_classes(shards)
     samples_per_epoch = min(total_rows, args.max_samples) if args.max_samples else total_rows
     steps_per_epoch = (
-        math.ceil(samples_per_epoch / args.batch_size)
+        estimate_max_sample_batches(samples_per_epoch, args.batch_size, args.num_workers)
         if args.max_samples
         else estimate_loader_batches(row_counts, args.batch_size, args.num_workers)
     )
@@ -243,8 +266,9 @@ def main() -> None:
     )
 
     device = torch.device(args.device)
-    backbone = InceptionResnetV1(pretrained=None, classify=False).to(device)
-    head = ArcMarginProduct(512, num_classes, scale=args.arc_scale, margin=args.arc_margin).to(device)
+    backbone, embedding_size, backbone_name = build_backbone(args.backbone, pretrained_model=None)
+    backbone = backbone.to(device)
+    head = ArcMarginProduct(embedding_size, num_classes, scale=args.arc_scale, margin=args.arc_margin).to(device)
     optimizer = torch.optim.SGD(
         list(backbone.parameters()) + list(head.parameters()),
         lr=args.lr,
@@ -261,6 +285,9 @@ def main() -> None:
         payload = torch.load(args.resume, map_location="cpu")
         if int(payload.get("num_classes", num_classes)) != num_classes:
             raise ValueError(f"Checkpoint num_classes={payload.get('num_classes')} but data has {num_classes}")
+        checkpoint_backbone = canonical_backbone_name(payload.get("backbone", payload.get("model_arch", args.backbone)))
+        if checkpoint_backbone != backbone_name:
+            raise ValueError(f"Checkpoint backbone={checkpoint_backbone} but requested {backbone_name}")
         backbone.load_state_dict(payload["backbone_state_dict"], strict=True)
         head.load_state_dict(payload["arcface_state_dict"], strict=True)
         history = [EpochMetrics(**x) for x in payload.get("history", [])]
@@ -270,7 +297,15 @@ def main() -> None:
             scheduler.load_state_dict(payload["scheduler_state_dict"])
 
     config = vars(args).copy()
-    config.update({"total_rows": total_rows, "num_classes": num_classes, "steps_per_epoch": steps_per_epoch})
+    config.update(
+        {
+            "total_rows": total_rows,
+            "num_classes": num_classes,
+            "steps_per_epoch": steps_per_epoch,
+            "backbone": backbone_name,
+            "embedding_size": embedding_size,
+        }
+    )
     with (args.output_dir / "training_config.json").open("w", encoding="utf-8") as f:
         json.dump(config, f, indent=2, default=str, ensure_ascii=False)
 
@@ -291,10 +326,12 @@ def main() -> None:
                 embeddings = backbone(images)
                 logits = head(embeddings, labels)
                 loss = F.cross_entropy(logits, labels)
+            scale_before_step = scaler.get_scale()
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
-            scheduler.step()
+            if not (device.type == "cuda" and scaler.get_scale() < scale_before_step):
+                scheduler.step()
 
             batch = labels.numel()
             seen += batch
@@ -312,9 +349,11 @@ def main() -> None:
         history.append(metrics)
         checkpoint = {
             "epoch": epoch,
-            "model_arch": "InceptionResnetV1",
+            "model_arch": backbone_name,
+            "backbone": backbone_name,
             "loss": "ArcFace",
             "image_size": args.image_size,
+            "embedding_size": embedding_size,
             "num_classes": num_classes,
             "total_rows": total_rows,
             "samples_seen_this_epoch": seen,

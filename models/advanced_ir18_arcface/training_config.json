@@ -1,0 +1,23 @@
+{
+  "data_dir": "/home/data1/data_mining/data/raw/casia_webface_parquet",
+  "output_dir": "models/advanced_ir18_arcface",
+  "epochs": 20,
+  "resume": null,
+  "resume_optimizer": false,
+  "backbone": "ir_resnet18",
+  "batch_size": 512,
+  "num_workers": 12,
+  "image_size": 112,
+  "lr": 0.05,
+  "weight_decay": 0.0005,
+  "arc_scale": 64.0,
+  "arc_margin": 0.35,
+  "shuffle_buffer": 16384,
+  "max_samples": null,
+  "seed": 42,
+  "device": "cuda",
+  "total_rows": 490592,
+  "num_classes": 10572,
+  "steps_per_epoch": 960,
+  "embedding_size": 512
+}

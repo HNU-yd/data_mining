@@ -16,6 +16,8 @@ __pycache__/
 /models/**/*.pth
 /models/**/checkpoints/
 /models/torch/
+/models/advanced_ir18_arcface_smoke*/
+/models/advanced_ir18_speed_*/
 /models/scratch_casia_arcface_*/
 !/models/README.md
 
@@ -24,5 +26,9 @@ __pycache__/
 !/results/scratch_casia_arcface_lfw_epoch21/**
 !/results/scratch_casia_arcface_lfw_epoch21_margin16/
 !/results/scratch_casia_arcface_lfw_epoch21_margin16/**
+!/results/advanced_ir18_arcface_lfw_epoch20/
+!/results/advanced_ir18_arcface_lfw_epoch20/**
+!/results/advanced_ir18_arcface_lfw_epoch20_margin16/
+!/results/advanced_ir18_arcface_lfw_epoch20_margin16/**
 /results/lfw_embeddings.npz
 /results/**/lfw_embeddings.npz

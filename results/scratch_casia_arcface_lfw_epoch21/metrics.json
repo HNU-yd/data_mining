@@ -1,6 +1,6 @@
 {
   "model": "local_checkpoint",
-  "pretrained_model_arg": "casia-webface",
+  "pretrained_model_arg": null,
   "checkpoint": "models/scratch_casia_arcface/epoch_021.pth",
   "preprocess": "mtcnn",
   "mtcnn_margin": 0,

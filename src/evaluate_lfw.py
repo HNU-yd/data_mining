@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate FaceNet/InceptionResnetV1 on the LFW 6000 verification pairs."""
+"""Evaluate a face-recognition backbone on the LFW 6000 verification pairs."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import argparse
 import csv
 import json
 import os
-import shutil
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable
@@ -19,12 +18,18 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from facenet_pytorch import InceptionResnetV1, MTCNN, fixed_image_standardization
+from facenet_pytorch import MTCNN, fixed_image_standardization
 from PIL import Image
 from sklearn.metrics import auc, confusion_matrix, roc_curve
+from torch import nn
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from tqdm import tqdm
+
+try:
+    from face_backbones import build_backbone, canonical_backbone_name
+except ModuleNotFoundError:
+    from .face_backbones import build_backbone, canonical_backbone_name
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -123,21 +128,28 @@ def collate_images(batch: list[tuple[str, torch.Tensor, bool]]) -> tuple[list[st
     return list(paths), torch.stack(list(tensors), dim=0), list(detected)
 
 
-def build_model(model_name: str, device: torch.device, checkpoint: Path | None = None) -> InceptionResnetV1:
-    pretrained = None if checkpoint else model_name
-    model = InceptionResnetV1(pretrained=pretrained).eval().to(device)
+def build_model(
+    model_name: str,
+    backbone_name: str,
+    device: torch.device,
+    checkpoint: Path | None = None,
+) -> tuple[nn.Module, str]:
     if checkpoint:
         payload = torch.load(checkpoint, map_location="cpu")
+        checkpoint_backbone = canonical_backbone_name(payload.get("backbone", payload.get("model_arch", backbone_name)))
+        model, _, canonical = build_backbone(checkpoint_backbone, pretrained_model=None)
         state = payload.get("backbone_state_dict", payload.get("model_state_dict", payload))
         missing, unexpected = model.load_state_dict(state, strict=False)
         allowed_unexpected = [k for k in unexpected if k.startswith("logits.")]
         if missing or len(allowed_unexpected) != len(unexpected):
             raise RuntimeError(f"Checkpoint load issue. missing={missing}, unexpected={unexpected}")
-    return model
+    else:
+        model, _, canonical = build_backbone(backbone_name, pretrained_model=model_name)
+    return model.eval().to(device), canonical
 
 
 def extract_embeddings(
-    model: InceptionResnetV1,
+    model: nn.Module,
     dataset: LFWImageDataset,
     batch_size: int,
     num_workers: int,
@@ -325,6 +337,8 @@ def save_model_artifact(model_name: str, model_dir: Path, checkpoint: Path | Non
     source = Path(os.environ.get("TORCH_HOME", str(model_dir / "torch"))) / "checkpoints" / checkpoint_name
     target = model_dir / f"facenet_{model_name.replace('-', '_')}.pth"
     if source.exists():
+        import shutil
+
         shutil.copy2(source, target)
     return target
 
@@ -342,11 +356,13 @@ def write_metrics(
     confusion: list[list[int]],
     detected: dict[str, bool],
     model_artifact: Path,
+    backbone_name: str,
 ) -> None:
     fold_accuracies = [r.accuracy for r in fold_results]
     metrics = {
         "model": "local_checkpoint" if args.checkpoint else args.model,
-        "pretrained_model_arg": args.model,
+        "pretrained_model_arg": None if args.checkpoint else args.model,
+        "backbone": backbone_name,
         "checkpoint": str(args.checkpoint) if args.checkpoint else None,
         "preprocess": args.preprocess,
         "mtcnn_margin": int(args.mtcnn_margin),
@@ -380,6 +396,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--model-dir", type=Path, default=DEFAULT_MODEL_DIR)
     parser.add_argument("--model", choices=["casia-webface", "vggface2"], default="casia-webface")
+    parser.add_argument(
+        "--backbone",
+        choices=["inception_resnet_v1", "ir_resnet18", "ir_resnet34"],
+        default="inception_resnet_v1",
+        help="used only without --checkpoint; checkpoints carry their own backbone",
+    )
     parser.add_argument("--checkpoint", type=Path, default=None, help="local scratch-trained backbone checkpoint")
     parser.add_argument("--preprocess", choices=["resize", "mtcnn"], default="resize")
     parser.add_argument("--image-size", type=int, default=160)
@@ -402,7 +424,7 @@ def main() -> None:
     verify_files_exist(args.lfw_root, pairs)
 
     device = torch.device(args.device)
-    model = build_model(args.model, device, args.checkpoint)
+    model, backbone_name = build_model(args.model, args.backbone, device, args.checkpoint)
     rel_paths = unique_image_paths(pairs)
     dataset = LFWImageDataset(args.lfw_root, rel_paths, args.preprocess, args.image_size, args.mtcnn_margin, device)
     embeddings, detected = extract_embeddings(model, dataset, args.batch_size, args.num_workers, device, args.tta_flip)
@@ -435,6 +457,7 @@ def main() -> None:
         confusion,
         detected,
         model_artifact,
+        backbone_name,
     )
 
     mean_acc = np.mean([r.accuracy for r in fold_results])

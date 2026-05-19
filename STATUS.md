@@ -23,7 +23,8 @@
   - `torch==2.11.0+cu128`
   - `torchvision==0.26.0+cu128`
 - CUDA smoke test 通过，GPU 矩阵乘法可用。
-- 训练期间 GPU 利用率常见 90% 以上，功耗约 430W-460W；显存占用约 4.7GB。显存未吃满的原因是 112x112 小图、InceptionResnetV1 模型较小，以及 parquet/PNG 解码成为瓶颈。实测 batch 768/1024/2048 比 batch 512 更慢，因此最终使用 batch 512。
+- Baseline 训练期间 GPU 利用率常见 90% 以上，功耗约 430W-460W；显存占用约 4.7GB。显存未吃满的原因是 112x112 小图、InceptionResnetV1 模型较小，以及 parquet/PNG 解码成为瓶颈。实测 batch 768/1024/2048 比 batch 512 更慢，因此 baseline 使用 batch 512。
+- 课程进阶 IR-ResNet18 训练期间 GPU 利用率可到约 99%，显存约 20GB，功耗约 474W，同样使用 batch 512 和 12 workers。
 
 ## 数据记录
 
@@ -40,8 +41,9 @@
 
 ## 训练记录
 
-- 已实现 `src/train_casia_parquet_arcface.py`：
-  - `InceptionResnetV1(pretrained=None, classify=False)` 从头训练。
+- 已实现 `src/face_backbones.py` 和 `src/train_casia_parquet_arcface.py`：
+  - 支持 `InceptionResnetV1(pretrained=None, classify=False)` baseline 从头训练。
+  - 支持课程进阶 `IR-ResNet18` / `IR-ResNet34` 从头训练。
   - ArcFace 分类头。
   - 数据增强：随机裁剪、翻转、旋转、颜色扰动、标准化。
   - 分片/row group/样本打乱。
@@ -55,13 +57,20 @@
   - `samples_seen: 490592`
   - 覆盖当前可下载 CASIA 镜像全部样本。
 - 第 22-26 轮也均记录 `samples_seen: 490592`，用于 margin 调参探索。
+- 已完成课程要求进阶训练：
+  - checkpoint：`models/advanced_ir18_arcface/epoch_020.pth`
+  - backbone：`ir_resnet18`
+  - epochs：20
+  - 第 20 轮 `samples_seen: 490592`
+  - 第 20 轮 `train_loss: 4.654311`
+  - 第 20 轮 `train_accuracy: 0.568587`
 
 ## 最终实验结果
 
-最终采用本地 scratch 训练 checkpoint：
+最终课程进阶采用本地 scratch 训练 checkpoint：
 
-- `models/scratch_casia_arcface/epoch_021.pth`
-- `models/scratch_casia_arcface/best_lfw.pth -> epoch_021.pth`
+- `models/advanced_ir18_arcface/epoch_020.pth`
+- `models/advanced_ir18_arcface/best_lfw.pth -> epoch_020.pth`
 
 最终评测命令：
 
@@ -70,20 +79,20 @@ TORCH_HOME=/home/data1/data_mining/models/torch \
 /home/yudi/miniconda3/envs/data_mining/bin/python src/evaluate_lfw.py \
   --lfw-root data/raw/lfw-deepfunneled \
   --pairs-file design/lfw_test_pair.txt \
-  --checkpoint models/scratch_casia_arcface/epoch_021.pth \
+  --checkpoint models/advanced_ir18_arcface/epoch_020.pth \
   --preprocess mtcnn \
   --mtcnn-margin 16 \
   --image-size 112 \
   --batch-size 512 \
   --num-workers 0 \
   --device cuda \
-  --output-dir results/scratch_casia_arcface_lfw_epoch21_margin16
+  --output-dir results/advanced_ir18_arcface_lfw_epoch20_margin16
 ```
 
-- LFW 10 折准确率：86.4833% ± 1.8355%。
-- ROC AUC：0.930206。
-- 全局最优准确率：86.5333%，阈值 0.984878。
-- 10 折混淆矩阵 `[[TN, FP], [FN, TP]]`：`[[2632, 368], [443, 2557]]`。
+- LFW 10 折准确率：94.1167% ± 0.9430%。
+- ROC AUC：0.971984。
+- 全局最优准确率：94.3167%，阈值 0.278341。
+- 10 折混淆矩阵 `[[TN, FP], [FN, TP]]`：`[[2912, 88], [265, 2735]]`。
 - MTCNN 检测成功率：99.9870%。
 
 ## 对照记录
@@ -91,6 +100,9 @@ TORCH_HOME=/home/data1/data_mining/models/torch \
 - 外部 CASIA 预训练 FaceNet + MTCNN：95.8167%，只作为早期基线，不作为最终结果。
 - scratch epoch 10 + MTCNN margin 0：83.4167%。
 - scratch epoch 21 + MTCNN margin 0：84.8500%，已整理为 `baseline.md`。
+- scratch epoch 21 + MTCNN margin 16：86.4833%，作为 baseline 上的人脸对齐边距改进。
+- 课程进阶 IR-ResNet18 epoch 20 + MTCNN margin 0：92.4333%。
+- 课程进阶 IR-ResNet18 epoch 20 + MTCNN margin 16：94.1167%，已整理为 `advanced.md`。
 - scratch epoch 21 + resize 112：65.2333%。
 - scratch epoch 22 + MTCNN margin 0：84.7000%。
 - scratch epoch 26 + MTCNN margin 0 + flip TTA：84.6833%。
@@ -100,6 +112,7 @@ TORCH_HOME=/home/data1/data_mining/models/torch \
 - 代码：
   - `src/download_lfw.py`
   - `src/download_casia_webface.py`
+  - `src/face_backbones.py`
   - `src/train_casia_parquet_arcface.py`
   - `src/evaluate_lfw.py`
   - `src/train_casia_classifier.py`
@@ -108,16 +121,17 @@ TORCH_HOME=/home/data1/data_mining/models/torch \
   - `requirements.txt`
   - `environment.yml`
 - 最佳结果：
-  - `results/scratch_casia_arcface_lfw_epoch21_margin16/metrics.json`
-  - `results/scratch_casia_arcface_lfw_epoch21_margin16/fold_metrics.csv`
-  - `results/scratch_casia_arcface_lfw_epoch21_margin16/pair_scores.csv`
-  - `results/scratch_casia_arcface_lfw_epoch21_margin16/roc_curve.png`
-  - `results/scratch_casia_arcface_lfw_epoch21_margin16/confusion_matrix.png`
-  - `results/scratch_casia_arcface_lfw_epoch21_margin16/score_histogram.png`
+  - `results/advanced_ir18_arcface_lfw_epoch20_margin16/metrics.json`
+  - `results/advanced_ir18_arcface_lfw_epoch20_margin16/fold_metrics.csv`
+  - `results/advanced_ir18_arcface_lfw_epoch20_margin16/pair_scores.csv`
+  - `results/advanced_ir18_arcface_lfw_epoch20_margin16/roc_curve.png`
+  - `results/advanced_ir18_arcface_lfw_epoch20_margin16/confusion_matrix.png`
+  - `results/advanced_ir18_arcface_lfw_epoch20_margin16/score_histogram.png`
 - 文档：
   - `README.md`
   - `STATUS.md`
   - `baseline.md`
+  - `advanced.md`
   - `reports/project_report.md`
   - `reports/presentation_outline.md`
   - `prompts/self_prompts.md`
