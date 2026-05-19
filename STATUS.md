@@ -90,7 +90,7 @@ TORCH_HOME=/home/data1/data_mining/models/torch \
 
 - 外部 CASIA 预训练 FaceNet + MTCNN：95.8167%，只作为早期基线，不作为最终结果。
 - scratch epoch 10 + MTCNN margin 0：83.4167%。
-- scratch epoch 21 + MTCNN margin 0：84.8500%。
+- scratch epoch 21 + MTCNN margin 0：84.8500%，已整理为 `baseline.md`。
 - scratch epoch 21 + resize 112：65.2333%。
 - scratch epoch 22 + MTCNN margin 0：84.7000%。
 - scratch epoch 26 + MTCNN margin 0 + flip TTA：84.6833%。
@@ -117,6 +117,7 @@ TORCH_HOME=/home/data1/data_mining/models/torch \
 - 文档：
   - `README.md`
   - `STATUS.md`
+  - `baseline.md`
   - `reports/project_report.md`
   - `reports/presentation_outline.md`
   - `prompts/self_prompts.md`

@@ -20,6 +20,8 @@ __pycache__/
 !/models/README.md
 
 /results/*
+!/results/scratch_casia_arcface_lfw_epoch21/
+!/results/scratch_casia_arcface_lfw_epoch21/**
 !/results/scratch_casia_arcface_lfw_epoch21_margin16/
 !/results/scratch_casia_arcface_lfw_epoch21_margin16/**
 /results/lfw_embeddings.npz

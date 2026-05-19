@@ -4,6 +4,8 @@
 
 主结果不使用他人的人脸识别预训练权重。最终权重由本机从 `pretrained=None` 的 `InceptionResnetV1` 开始，在可下载 CASIA-WebFace 镜像上训练得到。
 
+进阶实验前的可复现基线见 `baseline.md`。该 baseline 使用第 21 轮本地 scratch 权重、MTCNN `margin=0`，LFW 10 折准确率为 84.8500%；后续 `margin=16` 的 86.4833% 结果记录为在 baseline 上的改进。
+
 ## 环境
 
 工作目录固定为 `/home/data1/data_mining`。已创建 conda 环境：
@@ -21,7 +23,7 @@ conda activate data_mining
 
 关键配置：
 
-- GPU：NVIDIA RTX PRO 6000 Blackwell Workstation Edition，约 98GB 显存
+- GPU：NVIDIA RTX PRO 6000 Blackwell Workstation Edition，约 96GB 显存
 - PyTorch：`torch==2.11.0+cu128`
 - torchvision：`0.26.0+cu128`
 - Python：3.10
@@ -203,6 +205,7 @@ python src/evaluate_lfw.py \
 ## 报告
 
 - 项目报告：`reports/project_report.md`
+- Baseline 说明：`baseline.md`
 - 汇报提纲：`reports/presentation_outline.md`
 - 执行状态：`STATUS.md`
 - 自我任务提示：`prompts/self_prompts.md`

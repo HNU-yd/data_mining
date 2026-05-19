@@ -1,0 +1,45 @@
+{
+  "model": "local_checkpoint",
+  "pretrained_model_arg": "casia-webface",
+  "checkpoint": "models/scratch_casia_arcface/epoch_021.pth",
+  "preprocess": "mtcnn",
+  "mtcnn_margin": 0,
+  "tta_flip": false,
+  "image_size": 112,
+  "device": "cuda",
+  "lfw_root": "data/raw/lfw-deepfunneled",
+  "pairs_file": "design/lfw_test_pair.txt",
+  "num_pairs": 6000,
+  "num_positive_pairs": 3000,
+  "num_negative_pairs": 3000,
+  "num_unique_images": 7701,
+  "mtcnn_or_resize_success_rate": 0.9998701467341904,
+  "ten_fold_accuracy_mean": 0.8484999999999999,
+  "ten_fold_accuracy_std": 0.011959422133940148,
+  "ten_fold_accuracies": [
+    0.8583333333333333,
+    0.84,
+    0.84,
+    0.8533333333333334,
+    0.8233333333333334,
+    0.8566666666666667,
+    0.8433333333333334,
+    0.8683333333333333,
+    0.8466666666666667,
+    0.855
+  ],
+  "global_best_threshold": 0.9837498664855957,
+  "global_best_accuracy": 0.8513333333333334,
+  "roc_auc": 0.9177169444444445,
+  "confusion_matrix_10_fold": [
+    [
+      2502,
+      498
+    ],
+    [
+      411,
+      2589
+    ]
+  ],
+  "model_artifact": "/home/data1/data_mining/models/scratch_casia_arcface/epoch_021.pth"
+}
