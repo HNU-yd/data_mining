@@ -262,6 +262,7 @@ python src/evaluate_lfw.py \
 ## 报告
 
 - 项目报告：`reports/project_report.md`
+- 实验总报告：`reports/final_experiment_report.md`
 - Baseline 说明：`baseline.md`
 - 课程进阶说明：`advanced.md`
 - 自选进阶说明：`self_advanced.md`

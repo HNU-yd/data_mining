@@ -147,6 +147,7 @@ TORCH_HOME=/home/data1/data_mining/models/torch \
   - `baseline.md`
   - `advanced.md`
   - `self_advanced.md`
+  - `reports/final_experiment_report.md`
   - `reports/project_report.md`
   - `reports/presentation_outline.md`
   - `prompts/self_prompts.md`
