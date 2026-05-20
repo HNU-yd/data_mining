@@ -4,7 +4,7 @@
 
 本作业要求完成人脸识别基本流程：数据预处理、模型训练或构建、LFW 6000 对验证、指标分析和报告输出。核心指标为 LFW 测试准确率不低于 85%，进阶部分包括人脸检测对齐、ArcFace、ROC 曲线和混淆矩阵。
 
-用户进一步要求最终权重需要自行训练，不能直接使用他人的人脸识别预训练权重。因此 baseline 采用本地从头训练的 `InceptionResnetV1 + ArcFace`，课程要求进阶采用本地从头训练的 `IR-ResNet18 + ArcFace`。外部 CASIA 预训练 FaceNet 仅保留为早期对照。
+用户进一步要求最终权重需要自行训练，不能直接使用他人的人脸识别预训练权重。因此 baseline 采用本地从头训练的 `InceptionResnetV1 + ArcFace`，课程要求进阶采用本地从头训练的 `IR-ResNet18 + ArcFace`，自选进阶使用我们自己的 IR-ResNet18 checkpoint 做 hard-example self-distillation。外部 CASIA 预训练 FaceNet 仅保留为早期对照。
 
 ## 数据集
 
@@ -40,6 +40,8 @@ device: CUDA
 
 课程进阶最终选择 `models/advanced_ir18_arcface/epoch_020.pth`。该 checkpoint 第 20 轮训练损失为 4.654311，训练分类准确率为 56.8587%。
 
+自选进阶在 `src/train_casia_hsd_arcface.py` 中实现 hard-example self-distillation。Teacher 冻结为本项目自己训练的 `models/advanced_ir18_arcface/epoch_020.pth`，student 从同一 checkpoint 初始化。每张 CASIA 图像生成 weak/strong 两个视图，teacher 处理 weak view，student 处理 strong view；训练 loss 由难样本加权 ArcFace CE 和 embedding distillation loss 组成。最终第 24 轮作为最佳 checkpoint，该轮 `samples_seen=490592`，训练损失为 6.763883，teacher/student cosine 为 0.895734。
+
 ## 评测方法
 
 评测脚本对 LFW 中 7,701 张唯一图片提取 512 维 L2 归一化 embedding，图像对相似度使用 cosine similarity。由于作业 pair 文件前 3000 行为正样本、后 3000 行为负样本，脚本将其重组为 10 折，每折包含 300 个正样本和 300 个负样本。每次用其余 9 折选择阈值，在当前折测试。
@@ -53,11 +55,11 @@ device: CUDA
 - facenet-pytorch：2.6.0
 - CUDA smoke test：通过 GPU 张量矩阵乘法验证
 
-Baseline 训练时 GPU 利用率通常在 90% 以上，功耗约 430W-460W。课程进阶 IR-ResNet18 训练时 GPU 利用率可到约 99%，显存约 20GB，功耗约 474W。实测 batch 512 在当前 parquet/PNG 数据读取方式下吞吐更稳定，因此两组 scratch 训练均使用 batch 512。
+Baseline 训练时 GPU 利用率通常在 90% 以上，功耗约 430W-460W。课程进阶 IR-ResNet18 训练时 GPU 利用率可到约 99%，显存约 20GB，功耗约 474W。自选进阶采用 teacher/student 双前向，GPU 利用率约 94%-99%，显存约 20.5GB，功耗约 484W-502W。实测 batch 512 在当前 parquet/PNG 数据读取方式下吞吐更稳定，因此各组 scratch 训练均使用 batch 512。
 
 ## 最终结果
 
-最终课程进阶 checkpoint：`models/advanced_ir18_arcface/epoch_020.pth`
+最终自选进阶 checkpoint：`models/self_hsd_ir18_arcface/epoch_024.pth`
 
 最终评测配置：
 
@@ -71,24 +73,24 @@ tta_flip: false
 
 | 指标 | 数值 |
 | --- | ---: |
-| LFW 10 折准确率 | 94.1167% ± 0.9430% |
-| ROC AUC | 0.971984 |
-| 全局最优阈值 | 0.278341 |
-| 全局最优准确率 | 94.3167% |
+| LFW 10 折准确率 | 94.7167% ± 0.7819% |
+| ROC AUC | 0.974148 |
+| 全局最优阈值 | 0.270818 |
+| 全局最优准确率 | 94.8000% |
 | MTCNN 检测成功率 | 99.9870% |
 
 10 折混淆矩阵 `[[TN, FP], [FN, TP]]`：
 
 ```text
-[[2912,   88],
- [ 265, 2735]]
+[[2921,   79],
+ [ 238, 2762]]
 ```
 
 逐折准确率：
 
 ```text
-95.00%, 93.17%, 93.00%, 93.00%, 93.83%,
-94.83%, 93.33%, 94.17%, 95.17%, 95.67%
+94.50%, 93.33%, 94.33%, 94.17%, 94.50%,
+95.33%, 94.17%, 95.00%, 95.83%, 96.00%
 ```
 
 ## 对照实验
@@ -99,28 +101,30 @@ tta_flip: false
 | scratch epoch 21，MTCNN margin 0 | 84.8500% | 接近 85%，但仍未达标 |
 | scratch epoch 21，MTCNN margin 16 | 86.4833% | baseline 上的人脸对齐边距改进 |
 | IR-ResNet18 epoch 20，MTCNN margin 0 | 92.4333% | 课程模型构建进阶，相同 margin 条件下明显超过 baseline |
-| IR-ResNet18 epoch 20，MTCNN margin 16 | 94.1167% | 当前最终课程进阶结果 |
+| IR-ResNet18 epoch 20，MTCNN margin 16 | 94.1167% | 课程进阶结果 |
+| HSD IR-ResNet18 epoch 24，MTCNN margin 0 | 93.4833% | 自选进阶，相同 margin 条件下继续提升 |
+| HSD IR-ResNet18 epoch 24，MTCNN margin 16 | 94.7167% | 当前最终自选进阶结果 |
 | scratch epoch 21，resize 112 | 65.2333% | 直接缩放不适合该模型 |
 | scratch epoch 22，MTCNN margin 0 | 84.7000% | 降 margin 后未提升 |
 | scratch epoch 26，MTCNN margin 0 + flip TTA | 84.6833% | TTA 未带来提升 |
 | 外部 CASIA 预训练 FaceNet | 95.8167% | 早期基线，不作为最终结果 |
 
-对照说明：最终准确率超过 85% 的关键不是使用外部预训练权重，而是完成 CASIA 全量镜像训练，并在 baseline 之后采用更适合人脸识别的 IR-ResNet 残差骨干。MTCNN 对齐边距进一步提升了最终效果。
+对照说明：最终准确率超过 85% 的关键不是使用外部预训练权重，而是完成 CASIA 全量镜像训练，并在 baseline 之后采用更适合人脸识别的 IR-ResNet 残差骨干。自选进阶进一步通过我们自己的 checkpoint 做难样本自蒸馏，提升了强增强下 embedding 的稳定性；MTCNN 对齐边距进一步提升了最终效果。
 
 ## 输出文件
 
-- 最佳模型：`models/advanced_ir18_arcface/epoch_020.pth`
-- 指标：`results/advanced_ir18_arcface_lfw_epoch20_margin16/metrics.json`
-- 逐折结果：`results/advanced_ir18_arcface_lfw_epoch20_margin16/fold_metrics.csv`
-- 每对分数：`results/advanced_ir18_arcface_lfw_epoch20_margin16/pair_scores.csv`
-- ROC 曲线：`results/advanced_ir18_arcface_lfw_epoch20_margin16/roc_curve.png`
-- 混淆矩阵：`results/advanced_ir18_arcface_lfw_epoch20_margin16/confusion_matrix.png`
-- 分数分布：`results/advanced_ir18_arcface_lfw_epoch20_margin16/score_histogram.png`
+- 最佳模型：`models/self_hsd_ir18_arcface/epoch_024.pth`
+- 指标：`results/self_hsd_ir18_lfw_epoch24_margin16/metrics.json`
+- 逐折结果：`results/self_hsd_ir18_lfw_epoch24_margin16/fold_metrics.csv`
+- 每对分数：`results/self_hsd_ir18_lfw_epoch24_margin16/pair_scores.csv`
+- ROC 曲线：`results/self_hsd_ir18_lfw_epoch24_margin16/roc_curve.png`
+- 混淆矩阵：`results/self_hsd_ir18_lfw_epoch24_margin16/confusion_matrix.png`
+- 分数分布：`results/self_hsd_ir18_lfw_epoch24_margin16/score_histogram.png`
 
 ## 结论
 
-本项目完成了作业要求的人脸识别流程：CASIA-WebFace 数据准备、训练数据增强、GPU 训练、本地权重保存、LFW 6000 对 10 折评测、ROC 曲线和混淆矩阵输出。最终课程进阶使用本地从头训练的 IR-ResNet18 + ArcFace 权重，在 LFW 上取得 94.1167% 的 10 折准确率，高于 85% 要求。
+本项目完成了作业要求的人脸识别流程：CASIA-WebFace 数据准备、训练数据增强、GPU 训练、本地权重保存、LFW 6000 对 10 折评测、ROC 曲线和混淆矩阵输出。最终自选进阶使用本地训练的 HSD IR-ResNet18 + ArcFace 权重，在 LFW 上取得 94.7167% 的 10 折准确率，高于 85% 要求。
 
 ## 局限与改进
 
-当前公开镜像比 PPT 标称数据少 3,822 张和 3 个身份标签，若后续申请到官方原始 CASIA-WebFace，可重新训练以消除数据源差异。模型方面，IR-ResNet18 已完成课程要求进阶；若后续继续自选进阶，可以尝试 IR-ResNet34/50、Partial FC、WebDataset/LMDB 缓存、更长训练和更系统的学习率策略。
+当前公开镜像比 PPT 标称数据少 3,822 张和 3 个身份标签，若后续申请到官方原始 CASIA-WebFace，可重新训练以消除数据源差异。模型方面，IR-ResNet18 和 hard-example self-distillation 已完成进阶；若继续扩展，可以尝试 IR-ResNet34/50、Partial FC、WebDataset/LMDB 缓存、更长训练和更系统的学习率策略。

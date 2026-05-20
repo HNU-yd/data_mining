@@ -1,0 +1,57 @@
+[
+  {
+    "epoch": 21,
+    "train_loss": 7.383925797534031,
+    "arcface_loss": 7.272266102659633,
+    "distill_loss": 0.11165970144439535,
+    "train_accuracy": 0.49182620181331943,
+    "hard_weight_mean": 1.49874115535141,
+    "teacher_student_cosine": 0.8883402970612271,
+    "samples_seen": 490592,
+    "learning_rate": 0.0027135254915624215
+  },
+  {
+    "epoch": 22,
+    "train_loss": 7.218104338216911,
+    "arcface_loss": 7.1079388883713985,
+    "distill_loss": 0.11016545418441426,
+    "train_accuracy": 0.50221365207749,
+    "hard_weight_mean": 1.4885756474693697,
+    "teacher_student_cosine": 0.8898345477914038,
+    "samples_seen": 490592,
+    "learning_rate": 0.00196352549156243
+  },
+  {
+    "epoch": 23,
+    "train_loss": 6.980488102197624,
+    "arcface_loss": 6.873053085109227,
+    "distill_loss": 0.10743501980614174,
+    "train_accuracy": 0.5178152110103711,
+    "hard_weight_mean": 1.473225060431223,
+    "teacher_student_cosine": 0.8925649811022941,
+    "samples_seen": 490592,
+    "learning_rate": 0.001037408305202204
+  },
+  {
+    "epoch": 24,
+    "train_loss": 6.763883320383733,
+    "arcface_loss": 6.659617308697568,
+    "distill_loss": 0.10426601529032464,
+    "train_accuracy": 0.534340144152371,
+    "hard_weight_mean": 1.4577138031691392,
+    "teacher_student_cosine": 0.8957339842200491,
+    "samples_seen": 490592,
+    "learning_rate": 0.00028705182513629493
+  },
+  {
+    "epoch": 25,
+    "train_loss": 6.6486630246629295,
+    "arcface_loss": 6.546824116981253,
+    "distill_loss": 0.10183890750045171,
+    "train_accuracy": 0.5426912791076903,
+    "hard_weight_mean": 1.4496488633532982,
+    "teacher_student_cosine": 0.8981610931329491,
+    "samples_seen": 490592,
+    "learning_rate": 1.285104556270077e-09
+  }
+]

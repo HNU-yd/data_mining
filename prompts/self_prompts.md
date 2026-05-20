@@ -10,3 +10,4 @@
 8. Evaluate all 6000 LFW pairs with 10-fold threshold selection; save metrics, ROC, confusion matrix, scores, embeddings, and a `.pth` model artifact.
 9. Write `README.md` and `STATUS.md` with exact commands, environment details, data source, model source, training coverage, results, limitations, and next steps.
 10. After freezing the baseline, complete the course-required advanced experiment with a scratch IR-ResNet18 backbone, compare it against the baseline under the same LFW protocol, and document the architecture, commands, metrics, and artifacts in `advanced.md`.
+11. After the course advanced result is frozen, run a self-designed advanced experiment using only locally trained weights; document the method, commands, training curves, LFW comparison, and artifacts in `self_advanced.md`.

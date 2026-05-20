@@ -2,9 +2,9 @@
 
 本项目按 `design/大作业.pptx` 完成人脸验证大作业：读取作业给定 LFW 6000 对，使用 CASIA-WebFace 训练人脸特征模型，并输出准确率、ROC、混淆矩阵、训练记录和报告。
 
-主结果不使用他人的人脸识别预训练权重。当前课程进阶最终权重由本机从 `pretrained=None` 的 `IR-ResNet18` 开始，在可下载 CASIA-WebFace 镜像上训练得到。
+主结果不使用他人的人脸识别预训练权重。当前最终权重由本机从 `pretrained=None` 的 `IR-ResNet18` 开始，在可下载 CASIA-WebFace 镜像上训练，并用我们自己的 IR-ResNet18 checkpoint 做 hard-example self-distillation 微调得到。
 
-进阶实验前的可复现基线见 `baseline.md`。该 baseline 使用第 21 轮本地 scratch InceptionResnetV1 权重、MTCNN `margin=0`，LFW 10 折准确率为 84.8500%。课程要求进阶见 `advanced.md`，使用从头训练的 `IR-ResNet18 + ArcFace`，最终 LFW 10 折准确率为 94.1167%。
+进阶实验前的可复现基线见 `baseline.md`。该 baseline 使用第 21 轮本地 scratch InceptionResnetV1 权重、MTCNN `margin=0`，LFW 10 折准确率为 84.8500%。课程要求进阶见 `advanced.md`，使用从头训练的 `IR-ResNet18 + ArcFace`，LFW 10 折准确率为 94.1167%。自选进阶见 `self_advanced.md`，最终 LFW 10 折准确率为 94.7167%。
 
 ## 环境
 
@@ -103,6 +103,14 @@ Baseline 模型：
 - Workers：12
 - Device：CUDA
 
+自选进阶模型：
+
+- Backbone：`IR-ResNet18`
+- Teacher：`models/advanced_ir18_arcface/epoch_020.pth`，由本项目本地训练得到
+- Student：从同一 checkpoint 初始化
+- Loss：hard-example weighted ArcFace CE + embedding self-distillation
+- 推理结构：仍为单个 IR-ResNet18 backbone
+
 Baseline 训练命令：
 
 ```bash
@@ -162,23 +170,41 @@ python src/train_casia_parquet_arcface.py \
 
 第 20 轮训练日志记录 `samples_seen: 490592`，同样覆盖当前可下载 CASIA-WebFace 镜像的全部样本。训练期间 RTX PRO 6000 利用率可到约 99%，显存约 20GB，功耗约 474W。
 
+自选进阶训练命令：
+
+```bash
+TORCH_HOME=/home/data1/data_mining/models/torch \
+python src/train_casia_hsd_arcface.py \
+  --epochs 5 \
+  --batch-size 512 \
+  --num-workers 12 \
+  --output-dir models/self_hsd_ir18_arcface \
+  --lr 0.003 \
+  --distill-weight 1.0 \
+  --hard-weight 1.0 \
+  --hard-gamma 2.0 \
+  --device cuda
+```
+
+自选进阶第 24 轮作为最佳 checkpoint，该轮 `samples_seen: 490592`，训练期间 GPU 利用率约 94%-99%，功耗约 484W-502W。
+
 ## 最终评测
 
-课程进阶最终命令：
+自选进阶最终命令：
 
 ```bash
 TORCH_HOME=/home/data1/data_mining/models/torch \
 python src/evaluate_lfw.py \
   --lfw-root data/raw/lfw-deepfunneled \
   --pairs-file design/lfw_test_pair.txt \
-  --checkpoint models/advanced_ir18_arcface/epoch_020.pth \
+  --checkpoint models/self_hsd_ir18_arcface/epoch_024.pth \
   --preprocess mtcnn \
   --mtcnn-margin 16 \
   --image-size 112 \
   --batch-size 512 \
   --num-workers 0 \
   --device cuda \
-  --output-dir results/advanced_ir18_arcface_lfw_epoch20_margin16
+  --output-dir results/self_hsd_ir18_lfw_epoch24_margin16
 ```
 
 评测协议：
@@ -188,30 +214,30 @@ python src/evaluate_lfw.py \
 - 按作业 6000 对重组 10 折：每折 300 个同人对 + 300 个异人对
 - 每折用其余 9 折选择阈值，在当前折测试
 
-课程进阶最终结果：
+自选进阶最终结果：
 
 | 指标 | 数值 |
 | --- | ---: |
-| LFW 10 折准确率 | 94.1167% ± 0.9430% |
-| ROC AUC | 0.971984 |
-| 全局最优阈值 | 0.278341 |
-| 全局最优准确率 | 94.3167% |
-| 10 折混淆矩阵 `[[TN, FP], [FN, TP]]` | `[[2912, 88], [265, 2735]]` |
+| LFW 10 折准确率 | 94.7167% ± 0.7819% |
+| ROC AUC | 0.974148 |
+| 全局最优阈值 | 0.270818 |
+| 全局最优准确率 | 94.8000% |
+| 10 折混淆矩阵 `[[TN, FP], [FN, TP]]` | `[[2921, 79], [238, 2762]]` |
 | MTCNN 检测成功率 | 99.9870% |
 
 输出文件：
 
-- `results/advanced_ir18_arcface_lfw_epoch20_margin16/metrics.json`
-- `results/advanced_ir18_arcface_lfw_epoch20_margin16/fold_metrics.csv`
-- `results/advanced_ir18_arcface_lfw_epoch20_margin16/pair_scores.csv`
-- `results/advanced_ir18_arcface_lfw_epoch20_margin16/roc_curve.png`
-- `results/advanced_ir18_arcface_lfw_epoch20_margin16/confusion_matrix.png`
-- `results/advanced_ir18_arcface_lfw_epoch20_margin16/score_histogram.png`
+- `results/self_hsd_ir18_lfw_epoch24_margin16/metrics.json`
+- `results/self_hsd_ir18_lfw_epoch24_margin16/fold_metrics.csv`
+- `results/self_hsd_ir18_lfw_epoch24_margin16/pair_scores.csv`
+- `results/self_hsd_ir18_lfw_epoch24_margin16/roc_curve.png`
+- `results/self_hsd_ir18_lfw_epoch24_margin16/confusion_matrix.png`
+- `results/self_hsd_ir18_lfw_epoch24_margin16/score_histogram.png`
 
 最佳本地权重：
 
-- `models/advanced_ir18_arcface/epoch_020.pth`
-- `models/advanced_ir18_arcface/best_lfw.pth` 指向第 20 轮
+- `models/self_hsd_ir18_arcface/epoch_024.pth`
+- `models/self_hsd_ir18_arcface/best_lfw.pth` 指向第 24 轮
 
 ## 对照实验
 
@@ -227,6 +253,8 @@ python src/evaluate_lfw.py \
 | scratch epoch 26，MTCNN margin 0 + flip TTA | 84.6833% |
 | 课程进阶 IR-ResNet18 epoch 20，MTCNN margin 0 | 92.4333% |
 | 课程进阶 IR-ResNet18 epoch 20，MTCNN margin 16 | 94.1167% |
+| 自选进阶 HSD IR-ResNet18 epoch 24，MTCNN margin 0 | 93.4833% |
+| 自选进阶 HSD IR-ResNet18 epoch 24，MTCNN margin 16 | 94.7167% |
 | 外部 CASIA 预训练 FaceNet，MTCNN margin 0 | 95.8167% |
 
 外部预训练 FaceNet 是早期基线，用户要求“训练一个权重，不要用其他人的权重”后已不作为最终提交结果。
@@ -236,6 +264,7 @@ python src/evaluate_lfw.py \
 - 项目报告：`reports/project_report.md`
 - Baseline 说明：`baseline.md`
 - 课程进阶说明：`advanced.md`
+- 自选进阶说明：`self_advanced.md`
 - 汇报提纲：`reports/presentation_outline.md`
 - 执行状态：`STATUS.md`
 - 自我任务提示：`prompts/self_prompts.md`

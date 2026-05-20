@@ -1,0 +1,21 @@
+{
+  "checkpoint": "models/self_hsd_ir18_arcface/epoch_024.pth",
+  "symlink": "models/self_hsd_ir18_arcface/best_lfw.pth",
+  "epoch": 24,
+  "backbone": "ir_resnet18",
+  "loss": "ArcFace + hard-example self-distillation",
+  "num_classes": 10572,
+  "training_samples_seen_this_epoch": 490592,
+  "teacher_checkpoint": "models/advanced_ir18_arcface/epoch_020.pth",
+  "teacher_pretrained_backbone": false,
+  "student_start_checkpoint": "models/advanced_ir18_arcface/epoch_020.pth",
+  "student_pretrained_backbone": false,
+  "course_advanced_output_dir": "results/advanced_ir18_arcface_lfw_epoch20_margin16",
+  "self_advanced_output_dir": "results/self_hsd_ir18_lfw_epoch24_margin16",
+  "lfw_ten_fold_accuracy_mean_margin0": 0.9348333333333333,
+  "lfw_ten_fold_accuracy_std_margin0": 0.009928914005737638,
+  "lfw_ten_fold_accuracy_mean_margin16": 0.9471666666666667,
+  "lfw_ten_fold_accuracy_std_margin16": 0.00781913607049327,
+  "roc_auc_margin16": 0.9741483333333332,
+  "image_size": 112
+}

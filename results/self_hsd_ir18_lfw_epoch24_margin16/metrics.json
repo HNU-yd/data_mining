@@ -1,0 +1,46 @@
+{
+  "model": "local_checkpoint",
+  "pretrained_model_arg": null,
+  "backbone": "ir_resnet18",
+  "checkpoint": "models/self_hsd_ir18_arcface/epoch_024.pth",
+  "preprocess": "mtcnn",
+  "mtcnn_margin": 16,
+  "tta_flip": false,
+  "image_size": 112,
+  "device": "cuda",
+  "lfw_root": "data/raw/lfw-deepfunneled",
+  "pairs_file": "design/lfw_test_pair.txt",
+  "num_pairs": 6000,
+  "num_positive_pairs": 3000,
+  "num_negative_pairs": 3000,
+  "num_unique_images": 7701,
+  "mtcnn_or_resize_success_rate": 0.9998701467341904,
+  "ten_fold_accuracy_mean": 0.9471666666666667,
+  "ten_fold_accuracy_std": 0.00781913607049327,
+  "ten_fold_accuracies": [
+    0.945,
+    0.9333333333333333,
+    0.9433333333333334,
+    0.9416666666666667,
+    0.945,
+    0.9533333333333334,
+    0.9416666666666667,
+    0.95,
+    0.9583333333333334,
+    0.96
+  ],
+  "global_best_threshold": 0.2708178758621216,
+  "global_best_accuracy": 0.948,
+  "roc_auc": 0.9741483333333332,
+  "confusion_matrix_10_fold": [
+    [
+      2921,
+      79
+    ],
+    [
+      238,
+      2762
+    ]
+  ],
+  "model_artifact": "/home/data1/data_mining/models/self_hsd_ir18_arcface/epoch_024.pth"
+}
