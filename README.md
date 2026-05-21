@@ -257,7 +257,6 @@ python src/evaluate_lfw.py \
 | 自选进阶 HSD IR-ResNet18 epoch 24，MTCNN margin 16 | 94.7167% |
 | 外部 CASIA 预训练 FaceNet，MTCNN margin 0 | 95.8167% |
 
-外部预训练 FaceNet 是早期基线，用户要求“训练一个权重，不要用其他人的权重”后已不作为最终提交结果。
 
 ## 报告
 
